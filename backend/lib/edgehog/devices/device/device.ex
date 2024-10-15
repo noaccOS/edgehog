@@ -224,6 +224,14 @@ defmodule Edgehog.Devices.Device do
       argument :behavior, LedBehavior, description: "The led behavior.", allow_nil?: false
       manual ManualActions.SetLedBehavior
     end
+
+    update :update_application do
+      description "Updates an application to a newer release."
+    end
+
+    update :send_deployment_command do
+      description "Sends a command for the deployment."
+    end
   end
 
   attributes do
