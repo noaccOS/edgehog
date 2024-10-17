@@ -27,6 +27,8 @@ defmodule Edgehog.Devices.Device do
     ]
 
   alias Edgehog.Changes.NormalizeTagName
+  alias Edgehog.Containers.Deployment
+  alias Edgehog.Containers.Release
   alias Edgehog.Devices.Device.BatterySlot
   alias Edgehog.Devices.Device.Calculations
   alias Edgehog.Devices.Device.Changes
@@ -227,10 +229,48 @@ defmodule Edgehog.Devices.Device do
 
     update :update_application do
       description "Updates an application to a newer release."
+
+      argument :from, :struct do
+        constraints instance_of: Release
+        description "The release to be upgraded. Should be currently installed."
+      end
+
+      argument :to, :struct do
+        constraints instance_of: Release
+        description "The new release of the application"
+      end
+
+      validate fn changeset, _context ->
+        from = changeset.arguments.from
+        to = changeset.arguments.to
+
+        from_version = Version.parse!(from.version)
+        to_version = Version.parse!(to.version)
+
+        cond do
+          from.application_id != to.application_id ->
+            {:error, field: :to, message: "must belong to the same application as from"}
+
+          Version.compare(from_version, to_version) != :lt ->
+            {:error, field: :to, message: "must be a newer release than from"}
+
+          true ->
+            :ok
+        end
+      end
+
+      manual Edgehog.Devices.Device.ManualActions.UpdateApplication
     end
 
-    update :send_deployment_command do
-      description "Sends a command for the deployment."
+    update :send_application_command do
+      description "Sends a command for the given application."
+
+      argument :deployment, :struct do
+        constraints instance_of: Deployment
+        description "The deployment target of the command."
+      end
+
+      manual Edgehog.Devices.Device.ManualActions.SendApplicationCommand
     end
   end
 

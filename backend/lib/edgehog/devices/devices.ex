@@ -70,7 +70,7 @@ defmodule Edgehog.Devices do
       update Device, :remove_device_tags, :remove_tags
       update Device, :set_device_led_behavior, :set_led_behavior
       update Device, :update_device_application, :update_application
-      update Device, :send_device_deployment_command, :send_deployment_command
+      update Device, :send_device_application_command, :send_application_command
       create HardwareType, :create_hardware_type, :create
       update HardwareType, :update_hardware_type, :update
       destroy HardwareType, :delete_hardware_type, :destroy

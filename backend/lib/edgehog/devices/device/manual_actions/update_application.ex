@@ -32,8 +32,8 @@ defmodule Edgehog.Devices.Device.ManualActions.UpdateApplication do
 
   @impl Ash.Resource.ManualUpdate
   def update(changeset, _opts, _context) do
-    from = changeset.arguments.release_from_id
-    to = changeset.arguments.release_to_id
+    from = changeset.arguments.from
+    to = changeset.arguments.to
     device = changeset.data
 
     with {:ok, device} <- Ash.load(device, :appengine_client) do

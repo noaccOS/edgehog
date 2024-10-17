@@ -18,7 +18,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-defmodule Edgehog.Devices.Device.ManualActions.SendDeploymentCommand do
+defmodule Edgehog.Devices.Device.ManualActions.SendApplicationCommand do
   @moduledoc false
   use Ash.Resource.ManualUpdate
 
@@ -38,7 +38,6 @@ defmodule Edgehog.Devices.Device.ManualActions.SendDeploymentCommand do
 
     with {:ok, command} <- deployment_command_from_enum(command),
          {:ok, device} <- Ash.load(device, :appengine_client) do
-           result = 
       device.appengine_client
       |> @deployment_command.send_deployment_command(device.device_id, deployment.id, command)
       |> case do
