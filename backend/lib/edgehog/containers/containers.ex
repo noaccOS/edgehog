@@ -50,6 +50,7 @@ defmodule Edgehog.Containers do
   resources do
     resource Edgehog.Containers.Application
     resource Edgehog.Containers.Container
+    resource Edgehog.Containers.Deployment
     resource Edgehog.Containers.Image
     resource Edgehog.Containers.ImageCredentials
     resource Edgehog.Containers.Release
