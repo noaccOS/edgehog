@@ -232,7 +232,11 @@ defmodule Edgehog.Devices.Device do
 
       argument :from, :struct do
         constraints instance_of: Release
-        description "The release to be upgraded. Should be currently installed."
+
+        description """
+        The release to be upgraded. Should be currently installed.
+        This argument is needed because there might be multiple versions of a single application installed on the device.
+        """
       end
 
       argument :to, :struct do
@@ -240,24 +244,9 @@ defmodule Edgehog.Devices.Device do
         description "The new release of the application"
       end
 
-      validate fn changeset, _context ->
-        from = changeset.arguments.from
-        to = changeset.arguments.to
+      validate {Edgehog.Containers.Validations.SameApplication, [release_a: :from, release_b: :to]}
 
-        from_version = Version.parse!(from.version)
-        to_version = Version.parse!(to.version)
-
-        cond do
-          from.application_id != to.application_id ->
-            {:error, field: :to, message: "must belong to the same application as from"}
-
-          Version.compare(from_version, to_version) != :lt ->
-            {:error, field: :to, message: "must be a newer release than from"}
-
-          true ->
-            :ok
-        end
-      end
+      validate {Edgehog.Containers.Validations.IsUpgrade, [from: :from, to: :to]}
 
       manual Edgehog.Devices.Device.ManualActions.UpdateApplication
     end

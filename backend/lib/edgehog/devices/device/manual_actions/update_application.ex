@@ -34,10 +34,13 @@ defmodule Edgehog.Devices.Device.ManualActions.UpdateApplication do
   def update(changeset, _opts, _context) do
     from = changeset.arguments.from
     to = changeset.arguments.to
+
     device = changeset.data
 
-    with {:ok, device} <- Ash.load(device, :appengine_client) do
-      case @deployment_update.update(device.appengine_client, device.device_id, from, to) do
+    with {:ok, from} <- fetch_deployment(device, from),
+         {:ok, to} <- fetch_deployment(device, to),
+         {:ok, device} <- Ash.load(device, :appengine_client) do
+      case @deployment_update.update(device.appengine_client, device.id, from, to) do
         :ok ->
           {:ok, device}
 
@@ -48,5 +51,9 @@ defmodule Edgehog.Devices.Device.ManualActions.UpdateApplication do
           {:error, reason}
       end
     end
+  end
+
+  defp fetch_deployment(device, release) do
+    Ash.get(Deployment, %{device_id: device.id, release_id: release.id}, tenant: device.tenant_id)
   end
 end
