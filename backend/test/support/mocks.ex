@@ -42,6 +42,14 @@ Mox.defmock(Edgehog.Astarte.Device.StorageUsageMock,
   for: Edgehog.Astarte.Device.StorageUsage.Behaviour
 )
 
+Mox.defmock(Edgehog.Astarte.Device.DeploymentCommandMock,
+  for: Edgehog.Astarte.Device.DeploymentCommand.Behaviour
+)
+
+Mox.defmock(Edgehog.Astarte.Device.DeploymentUpdateMock,
+  for: Edgehog.Astarte.Device.DeploymentUpdate.Behaviour
+)
+
 Mox.defmock(Edgehog.Astarte.Device.AvailableContainersMock,
   for: Edgehog.Astarte.Device.AvailableContainers.Behaviour
 )
