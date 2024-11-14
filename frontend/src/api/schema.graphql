@@ -3,6 +3,12 @@ schema {
   query: RootQueryType
 }
 
+input ContainerCreateWithNestedImageInput {
+  id: ID
+  reference: String!
+  imageCredentialsId: ID
+}
+
 input UpdateCampaignRolloutMechanismPushInput {
   "This boolean flag determines if the Base Image will be pushed to the Device even if it already has a greater version of the Base Image."
   forceDowngrade: Boolean
@@ -64,7 +70,7 @@ type Modem {
   "The cell tower's Mobile Network Code."
   mobileNetworkCode: Int
 
-  "The GSM/LTE registration status of the modem."
+  "The GSM\/LTE registration status of the modem."
   registrationStatus: ModemRegistrationStatus
 
   "Signal strength in dBm."
@@ -343,7 +349,7 @@ enum ModemRegistrationStatus {
   "Registration denied."
   REGISTRATION_DENIED
 
-  "Unknown (e.g. out of GERAN/UTRAN/E-UTRAN coverage)."
+  "Unknown (e.g. out of GERAN\/UTRAN\/E-UTRAN coverage)."
   UNKNOWN
 
   "Registered, roaming."
@@ -414,6 +420,9 @@ enum NetworkInterfaceTechnology {
 }
 
 enum ApplicationDeploymentStatus {
+  "The deployment is being deleted"
+  DELETING
+
   "The deployment process entered an error state."
   ERROR
 
@@ -776,9 +785,7 @@ type BaseImage implements Node {
   localizedDescriptions(preferredLanguageTags: [String!]): [LocalizedAttribute!]
 
   "A list of release display names in different languages."
-  localizedReleaseDisplayNames(
-    preferredLanguageTags: [String!]
-  ): [LocalizedAttribute!]
+  localizedReleaseDisplayNames(preferredLanguageTags: [String!]): [LocalizedAttribute!]
 }
 
 "A relay page info"
@@ -829,10 +836,22 @@ type MutationError {
   fields: [String!]
 }
 
+input ApplicationCreateInitialReleaseInput {
+  version: String!
+  containers: [ReleaseCreateContainersInput!]
+}
+
+input ReleaseCreateContainersInput {
+  env: JsonString
+  image: ContainerCreateWithNestedImageInput
+  hostname: String
+  privileged: Boolean
+  restartPolicy: String
+}
+
 enum NetworkSortField {
   ID
   DRIVER
-  CHECK_DUPLICATE
   INTERNAL
   ENABLE_IPV6
 }
@@ -880,17 +899,6 @@ input NetworkFilterInternal {
   greaterThanOrEqual: Boolean
 }
 
-input NetworkFilterCheckDuplicate {
-  isNil: Boolean
-  eq: Boolean
-  notEq: Boolean
-  in: [Boolean!]
-  lessThan: Boolean
-  greaterThan: Boolean
-  lessThanOrEqual: Boolean
-  greaterThanOrEqual: Boolean
-}
-
 input NetworkFilterDriver {
   isNil: Boolean
   eq: String
@@ -921,7 +929,6 @@ input NetworkFilterInput {
   not: [NetworkFilterInput!]
   id: NetworkFilterId
   driver: NetworkFilterDriver
-  checkDuplicate: NetworkFilterCheckDuplicate
   internal: NetworkFilterInternal
   enableIpv6: NetworkFilterEnableIpv6
 }
@@ -934,9 +941,24 @@ input NetworkSortInput {
 type Network {
   id: ID!
   driver: String!
-  checkDuplicate: Boolean!
   internal: Boolean!
   enableIpv6: Boolean!
+  options: [String!]!
+}
+
+"The result of the :create_release mutation"
+type CreateReleaseResult {
+  "The successful result of the mutation"
+  result: Release
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateReleaseInput {
+  version: String!
+  applicationId: ID
+  containers: [ReleaseCreateContainersInput!]
 }
 
 enum ReleaseSortField {
@@ -1204,6 +1226,11 @@ type Image {
   credentials: ImageCredentials
 }
 
+input UpgradeDeploymentInput {
+  from: JsonString!
+  to: JsonString!
+}
+
 "The result of the :stop_deployment mutation"
 type StopDeploymentResult {
   "The successful result of the mutation"
@@ -1232,7 +1259,7 @@ type DeployReleaseResult {
 }
 
 input DeployReleaseInput {
-  deviceId: ID
+  deviceId: Int
   releaseId: ID
 }
 
@@ -1277,13 +1304,13 @@ input DeploymentFilterReleaseId {
 
 input DeploymentFilterDeviceId {
   isNil: Boolean
-  eq: ID
-  notEq: ID
-  in: [ID]
-  lessThan: ID
-  greaterThan: ID
-  lessThanOrEqual: ID
-  greaterThanOrEqual: ID
+  eq: Int
+  notEq: Int
+  in: [Int]
+  lessThan: Int
+  greaterThan: Int
+  lessThanOrEqual: Int
+  greaterThanOrEqual: Int
 }
 
 input DeploymentFilterStatus {
@@ -1340,6 +1367,7 @@ enum ContainerSortField {
   HOSTNAME
   ENV
   PRIVILEGED
+  NETWORK_MODE
   IMAGE_ID
 }
 
@@ -1373,6 +1401,19 @@ input ContainerFilterImageId {
   greaterThan: ID
   lessThanOrEqual: ID
   greaterThanOrEqual: ID
+}
+
+input ContainerFilterNetworkMode {
+  isNil: Boolean
+  eq: String
+  notEq: String
+  in: [String!]
+  lessThan: String
+  greaterThan: String
+  lessThanOrEqual: String
+  greaterThanOrEqual: String
+  like: String
+  ilike: String
 }
 
 input ContainerFilterPrivileged {
@@ -1441,6 +1482,7 @@ input ContainerFilterInput {
   hostname: ContainerFilterHostname
   env: ContainerFilterEnv
   privileged: ContainerFilterPrivileged
+  networkMode: ContainerFilterNetworkMode
   imageId: ContainerFilterImageId
   image: ImageFilterInput
   networks: NetworkFilterInput
@@ -1458,6 +1500,7 @@ type Container {
   hostname: String!
   env: JsonString
   privileged: Boolean
+  networkMode: String!
   imageId: ID!
   image: Image!
   networks(
@@ -1479,6 +1522,21 @@ type Container {
     "The number of records to return to the end. Maximum 250"
     last: Int
   ): NetworkConnection!
+}
+
+"The result of the :create_application mutation"
+type CreateApplicationResult {
+  "The successful result of the mutation"
+  result: Application
+
+  "Any errors generated, if the mutation failed"
+  errors: [MutationError!]!
+}
+
+input CreateApplicationInput {
+  name: String!
+  description: String
+  initialRelease: ApplicationCreateInitialReleaseInput
 }
 
 enum ApplicationSortField {
@@ -3441,7 +3499,10 @@ type UpdateCampaign implements Node {
 
 type RootQueryType {
   "Returns a single update campaign."
-  updateCampaign("The id of the record" id: ID!): UpdateCampaign
+  updateCampaign(
+    "The id of the record"
+    id: ID!
+  ): UpdateCampaign
 
   "Returns a list of update campaigns."
   updateCampaigns(
@@ -3453,7 +3514,10 @@ type RootQueryType {
   ): [UpdateCampaign!]!
 
   "Returns a single update channel."
-  updateChannel("The id of the record" id: ID!): UpdateChannel
+  updateChannel(
+    "The id of the record"
+    id: ID!
+  ): UpdateChannel
 
   "Returns a list of update channels."
   updateChannels(
@@ -3477,7 +3541,10 @@ type RootQueryType {
   ): [Tag!]!
 
   "Returns a single device group."
-  deviceGroup("The id of the record" id: ID!): DeviceGroup
+  deviceGroup(
+    "The id of the record"
+    id: ID!
+  ): DeviceGroup
 
   "Returns a list of device groups."
   deviceGroups(
@@ -3498,7 +3565,10 @@ type RootQueryType {
   forwarderSession(token: String!, deviceId: ID!): ForwarderSession
 
   "Returns a single device."
-  device("The id of the record" id: ID!): Device
+  device(
+    "The id of the record"
+    id: ID!
+  ): Device
 
   "Returns a list of devices."
   devices(
@@ -3510,7 +3580,10 @@ type RootQueryType {
   ): [Device!]!
 
   "Returns a single hardware type."
-  hardwareType("The id of the record" id: ID!): HardwareType
+  hardwareType(
+    "The id of the record"
+    id: ID!
+  ): HardwareType
 
   "Returns a list of hardware types."
   hardwareTypes(
@@ -3522,7 +3595,10 @@ type RootQueryType {
   ): [HardwareType!]!
 
   "Returns a single system model."
-  systemModel("The id of the record" id: ID!): SystemModel
+  systemModel(
+    "The id of the record"
+    id: ID!
+  ): SystemModel
 
   "Returns a list of system models."
   systemModels(
@@ -3555,10 +3631,16 @@ type RootQueryType {
   ): KeysetPageOfApplication
 
   "Returns the desired application."
-  application("The id of the record" id: ID!): Application
+  application(
+    "The id of the record"
+    id: ID!
+  ): Application
 
   "Returns the desired image credentials."
-  imageCredentials("The id of the record" id: ID!): ImageCredentials
+  imageCredentials(
+    "The id of the record"
+    id: ID!
+  ): ImageCredentials
 
   "Returns all available image credentials."
   listImageCredentials(
@@ -3582,16 +3664,28 @@ type RootQueryType {
   ): KeysetPageOfImageCredentials
 
   "Returns the desired release."
-  release("The id of the record" id: ID!): Release
+  release(
+    "The id of the record"
+    id: ID!
+  ): Release
 
   "Retrieves a Node from its global id"
-  node("The Node unique identifier" id: ID!): Node!
+  node(
+    "The Node unique identifier"
+    id: ID!
+  ): Node!
 
   "Returns a single base image."
-  baseImage("The id of the record" id: ID!): BaseImage
+  baseImage(
+    "The id of the record"
+    id: ID!
+  ): BaseImage
 
   "Returns a single base image collection."
-  baseImageCollection("The id of the record" id: ID!): BaseImageCollection
+  baseImageCollection(
+    "The id of the record"
+    id: ID!
+  ): BaseImageCollection
 
   "Returns a list of base image collections."
   baseImageCollections(
@@ -3605,37 +3699,25 @@ type RootQueryType {
 
 type RootMutationType {
   "Creates a new update campaign."
-  createUpdateCampaign(
-    input: CreateUpdateCampaignInput!
-  ): CreateUpdateCampaignResult
+  createUpdateCampaign(input: CreateUpdateCampaignInput!): CreateUpdateCampaignResult
 
   "Creates a new update channel."
-  createUpdateChannel(
-    input: CreateUpdateChannelInput!
-  ): CreateUpdateChannelResult
+  createUpdateChannel(input: CreateUpdateChannelInput!): CreateUpdateChannelResult
 
   "Updates an update channel."
-  updateUpdateChannel(
-    id: ID!
-    input: UpdateUpdateChannelInput
-  ): UpdateUpdateChannelResult
+  updateUpdateChannel(id: ID!, input: UpdateUpdateChannelInput): UpdateUpdateChannelResult
 
   "Deletes an update channel."
   deleteUpdateChannel(id: ID!): DeleteUpdateChannelResult
 
   "Initiates an OTA update with a user provided OS image"
-  createManualOtaOperation(
-    input: CreateManualOtaOperationInput!
-  ): CreateManualOtaOperationResult
+  createManualOtaOperation(input: CreateManualOtaOperationInput!): CreateManualOtaOperationResult
 
   "Creates a new device group."
   createDeviceGroup(input: CreateDeviceGroupInput!): CreateDeviceGroupResult
 
   "Updates a device group."
-  updateDeviceGroup(
-    id: ID!
-    input: UpdateDeviceGroupInput
-  ): UpdateDeviceGroupResult
+  updateDeviceGroup(id: ID!, input: UpdateDeviceGroupInput): UpdateDeviceGroupResult
 
   "Deletes a device group."
   deleteDeviceGroup(id: ID!): DeleteDeviceGroupResult
@@ -3653,25 +3735,16 @@ type RootMutationType {
   addDeviceTags(id: ID!, input: AddDeviceTagsInput!): AddDeviceTagsResult
 
   "Remove tags from a device."
-  removeDeviceTags(
-    id: ID!
-    input: RemoveDeviceTagsInput!
-  ): RemoveDeviceTagsResult
+  removeDeviceTags(id: ID!, input: RemoveDeviceTagsInput!): RemoveDeviceTagsResult
 
   "Sets led behavior."
-  setDeviceLedBehavior(
-    id: ID!
-    input: SetDeviceLedBehaviorInput!
-  ): SetDeviceLedBehaviorResult
+  setDeviceLedBehavior(id: ID!, input: SetDeviceLedBehaviorInput!): SetDeviceLedBehaviorResult
 
   "Creates a hardware type."
   createHardwareType(input: CreateHardwareTypeInput!): CreateHardwareTypeResult
 
   "Updates a hardware type."
-  updateHardwareType(
-    id: ID!
-    input: UpdateHardwareTypeInput
-  ): UpdateHardwareTypeResult
+  updateHardwareType(id: ID!, input: UpdateHardwareTypeInput): UpdateHardwareTypeResult
 
   "Deletes a hardware type."
   deleteHardwareType(id: ID!): DeleteHardwareTypeResult
@@ -3680,13 +3753,13 @@ type RootMutationType {
   createSystemModel(input: CreateSystemModelInput!): CreateSystemModelResult
 
   "Updates an system model."
-  updateSystemModel(
-    id: ID!
-    input: UpdateSystemModelInput
-  ): UpdateSystemModelResult
+  updateSystemModel(id: ID!, input: UpdateSystemModelInput): UpdateSystemModelResult
 
   "Deletes a system model."
   deleteSystemModel(id: ID!): DeleteSystemModelResult
+
+  "Create a new application."
+  createApplication(input: CreateApplicationInput!): CreateApplicationResult
 
   "Deploy the application on a device"
   deployRelease(input: DeployReleaseInput): DeployReleaseResult
@@ -3697,12 +3770,15 @@ type RootMutationType {
   "Sends a :stop command to the release on the device."
   stopDeployment(id: ID!): StopDeploymentResult
 
+  upgradeDeployment(input: UpgradeDeploymentInput): String!
+
   "Create image credentials."
-  createImageCredentials(
-    input: CreateImageCredentialsInput!
-  ): CreateImageCredentialsResult
+  createImageCredentials(input: CreateImageCredentialsInput!): CreateImageCredentialsResult
 
   deleteImageCredentials(id: ID!): DeleteImageCredentialsResult
+
+  "Create a new release."
+  createRelease(input: CreateReleaseInput!): CreateReleaseResult
 
   "Create a new base image in a base image collection."
   createBaseImage(input: CreateBaseImageInput!): CreateBaseImageResult
@@ -3714,15 +3790,10 @@ type RootMutationType {
   deleteBaseImage(id: ID!): DeleteBaseImageResult
 
   "Creates a new base image collection."
-  createBaseImageCollection(
-    input: CreateBaseImageCollectionInput!
-  ): CreateBaseImageCollectionResult
+  createBaseImageCollection(input: CreateBaseImageCollectionInput!): CreateBaseImageCollectionResult
 
   "Updates a base image collection."
-  updateBaseImageCollection(
-    id: ID!
-    input: UpdateBaseImageCollectionInput
-  ): UpdateBaseImageCollectionResult
+  updateBaseImageCollection(id: ID!, input: UpdateBaseImageCollectionInput): UpdateBaseImageCollectionResult
 
   "Deletes a base image collection."
   deleteBaseImageCollection(id: ID!): DeleteBaseImageCollectionResult

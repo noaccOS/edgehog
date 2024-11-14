@@ -77,6 +77,8 @@ defmodule Edgehog.Containers do
 
       update Deployment, :start_deployment, :start
       update Deployment, :stop_deployment, :stop
+
+      action Deployment, :upgrade_deployment, :upgrade
     end
   end
 

@@ -18,7 +18,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-defmodule Edgehog.Containers.Validations.SameApplication do
+defmodule Edgehog.Containers.Validations.SameDevice do
   @moduledoc false
 
   use Ash.Resource.Validation
@@ -26,18 +26,14 @@ defmodule Edgehog.Containers.Validations.SameApplication do
   @impl Ash.Resource.Validation
   def validate(changeset, opts, _context) do
     with {:ok, deployment_a} <- Ash.Changeset.fetch_argument(changeset, opts[:deployment_a]),
-         {:ok, deployment_b} <- Ash.Changeset.fetch_argument(changeset, opts[:deployment_b]),
-         {:ok, deployment_a} <-
-           Ash.load(deployment_a, [:release], lazy?: true, reuse_values?: true),
-         {:ok, deployment_b} <-
-           Ash.load(deployment_b, [:release], lazy?: true, reuse_values?: true) do
-      application_a = deployment_a.release.application_id
-      application_b = deployment_b.release.application_id
+         {:ok, deployment_b} <- Ash.Changeset.fetch_argument(changeset, opts[:deployment_b]) do
+      device_a = deployment_a.device_id
+      device_b = deployment_b.device_id
 
-      if application_a == application_b do
+      if device_a == device_b do
         :ok
       else
-        {:error, field: opts[:deployment_b], message: "must belong to the same application as from"}
+        {:error, field: opts[:deployment_b], message: "must belong to the same device as from"}
       end
     end
   end

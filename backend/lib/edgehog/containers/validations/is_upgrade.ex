@@ -25,11 +25,13 @@ defmodule Edgehog.Containers.Validations.IsUpgrade do
 
   @impl Ash.Resource.Validation
   def validate(changeset, opts, _context) do
-    from = Ash.Changeset.get_argument(changeset, opts[:from])
-    to = Ash.Changeset.get_argument(changeset, opts[:to])
+    with {:ok, from} <- Ash.Changeset.fetch_argument(changeset, opts[:from]),
+         {:ok, to} <- Ash.Changeset.fetch_argument(changeset, opts[:to]),
+         {:ok, from} <- Ash.load(from, [:release], lazy?: true, reuse_values?: true),
+         {:ok, to} <- Ash.load(to, [:release], lazy?: true, reuse_values?: true) do
+      from_version = parse_version(from)
+      to_version = parse_version(to)
 
-    with {:ok, from_version} <- parse_version(from),
-         {:ok, to_version} <- parse_version(to) do
       if Version.compare(to_version, from_version) == :gt do
         :ok
       else
@@ -38,8 +40,8 @@ defmodule Edgehog.Containers.Validations.IsUpgrade do
     end
   end
 
-  defp parse_version(release) do
-    with :error <- release.version |> get_in() |> to_string() |> Version.parse() do
+  defp parse_version(deployment) do
+    with :error <- deployment.release.version |> get_in() |> to_string() |> Version.parse() do
       {:error, :invalid_release}
     end
   end

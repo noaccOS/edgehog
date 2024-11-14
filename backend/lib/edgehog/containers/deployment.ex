@@ -72,6 +72,20 @@ defmodule Edgehog.Containers.Deployment do
       run ManualActions.SendDeployRequest
     end
 
+    action :upgrade, :atom do
+      argument :from, :struct do
+        constraints instance_of: __MODULE__
+        allow_nil? false
+      end
+
+      argument :to, :struct do
+        constraints instance_of: __MODULE__
+        allow_nil? false
+      end
+
+      run ManualActions.SendDeploymentUpgrade
+    end
+
     update :set_status do
       accept [:status]
     end
