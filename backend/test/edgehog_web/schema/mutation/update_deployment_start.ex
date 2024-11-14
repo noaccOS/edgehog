@@ -18,7 +18,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-defmodule EdgehogWeb.Schema.Mutation.UpdateDeploymentStart do
+defmodule EdgehogWeb.Schema.Mutation.UpdateDeploymentStartTest do
   @moduledoc false
   use EdgehogWeb.GraphqlCase, async: true
 
